@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hunter Gray — Custom Interactive Maps</title>
+<link href="https://fonts.googleapis.com/css2?family=Editorial+New:ital,wght@0,400;1,400&family=DM+Mono:wght@400;500&family=Geist:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ── RESET & BASE ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; font-size: 16px; }
+body {
+  font-family: 'Geist', 'Helvetica Neue', sans-serif;
+  background: #fafaf8;
+  color: #111;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* ── TOKENS ── */
+:root {
+  --ink:     #0f0f0d;
+  --mid:     #666;
+  --faint:   #aaa;
+  --rule:    #e4e4e0;
+  --bg:      #fafaf8;
+  --bg2:     #f3f3ef;
+  --blue:    #1a4f6e;
+  --accent:  #0e7c6e;
+  --mono:    'DM Mono', monospace;
+}
+
+/* ── NAV ── */
+header {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(250,250,248,0.9);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--rule);
+  padding: 0 48px;
+  height: 58px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.logo {
+  font-family: var(--mono);
+  font-size: 13px; font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+  text-decoration: none;
+}
+.logo span { color: var(--accent); }
+nav { display: flex; align-items: center; gap: 36px; }
+nav a {
+  font-size: 13px; font-weight: 400;
+  color: var(--mid); text-decoration: none;
+  letter-spacing: 0.01em; transition: color 0.15s;
+}
+nav a:hover { color: var(--ink); }
+.nav-quote {
+  font-size: 12px; font-weight: 600;
+  color: var(--ink) !important;
+  border: 1px solid var(--ink);
+  padding: 7px 18px; border-radius: 3px;
+  letter-spacing: 0.04em; text-transform: uppercase;
+  transition: background 0.15s, color 0.15s !important;
+}
+.nav-quote:hover { background: var(--ink) !important; color: #fafaf8 !important; }
+
+/* ── HERO ── */
+.hero {
+  padding: 120px 48px 100px;
+  max-width: 1100px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 80px;
+  align-items: end;
+  border-bottom: 1px solid var(--rule);
+}
+.hero-h1 {
+  font-family: 'Editorial New', Georgia, serif;
+  font-size: clamp(52px, 6.5vw, 96px);
+  font-weight: 400;
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  margin-bottom: 40px;
+}
+.hero-h1 em {
+  font-style: italic;
+  color: var(--blue);
+}
+.hero-sub {
+  font-size: 17px; font-weight: 300;
+  line-height: 1.75; color: var(--mid);
+  max-width: 480px; margin-bottom: 48px;
+}
+.hero-actions { display: flex; gap: 14px; align-items: center; }
+.btn-primary {
+  font-size: 13px; font-weight: 600;
+  letter-spacing: 0.05em; text-transform: uppercase;
+  background: var(--ink); color: #fafaf8;
+  padding: 14px 30px; border-radius: 3px;
+  text-decoration: none;
+  transition: background 0.15s, transform 0.15s;
+}
+.btn-primary:hover { background: var(--blue); transform: translateY(-1px); }
+.btn-text {
+  font-size: 13px; font-weight: 500;
+  color: var(--mid); text-decoration: none;
+  letter-spacing: 0.01em;
+  transition: color 0.15s;
+  display: flex; align-items: center; gap: 5px;
+}
+.btn-text:hover { color: var(--ink); }
+.btn-text::after { content: '→'; transition: transform 0.15s; }
+.btn-text:hover::after { transform: translateX(3px); }
+
+/* HERO ASIDE */
+.hero-aside {
+  padding-bottom: 8px;
+  display: flex; flex-direction: column; gap: 28px;
+}
+.hero-stat {
+  padding-top: 20px;
+  border-top: 1px solid var(--rule);
+}
+.hero-stat-n {
+  font-family: 'Editorial New', Georgia, serif;
+  font-size: 44px; font-weight: 400;
+  letter-spacing: -0.03em; color: var(--ink);
+  line-height: 1;
+}
+.hero-stat-l {
+  font-size: 11px; font-weight: 500;
+  color: var(--faint); letter-spacing: 0.1em;
+  text-transform: uppercase; margin-top: 5px;
+}
+.hero-from {
+  font-family: var(--mono);
+  font-size: 11px; color: var(--faint);
+  letter-spacing: 0.06em;
+  padding-top: 20px;
+  border-top: 1px solid var(--rule);
+}
+
+/* ── SECTION BASE ── */
+.sec {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 96px 48px;
+  border-bottom: 1px solid var(--rule);
+}
+.sec-full { border-bottom: 1px solid var(--rule); }
+.sec-full-inner { max-width: 1100px; margin: 0 auto; padding: 96px 48px; }
+.sec-alt { background: var(--bg2); }
+.kicker {
+  font-family: var(--mono);
+  font-size: 11px; font-weight: 500;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--faint); margin-bottom: 20px;
+}
+.sec-h {
+  font-family: 'Editorial New', Georgia, serif;
+  font-size: clamp(32px, 4vw, 52px);
+  font-weight: 400; line-height: 1.1;
+  letter-spacing: -0.025em; color: var(--ink);
+  margin-bottom: 20px;
+}
+.sec-h em { font-style: italic; color: var(--blue); }
+.sec-p {
+  font-size: 16px; font-weight: 300;
+  color: var(--mid); line-height: 1.78;
+  max-width: 520px;
+}
+
+/* ── FEATURES ── */
+.feat-grid {
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 0;
+  margin-top: 64px;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.feat {
+  padding: 36px 32px;
+  border-right: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  background: var(--bg);
+  transition: background 0.2s;
+}
+.feat:nth-child(3n) { border-right: none; }
+.feat:nth-child(4), .feat:nth-child(5), .feat:nth-child(6) { border-bottom: none; }
+.feat:hover { background: #fff; }
+.feat-kicker {
+  font-family: var(--mono);
+  font-size: 10px; color: var(--faint);
+  letter-spacing: 0.1em; margin-bottom: 20px;
+}
+.feat-title { font-size: 15px; font-weight: 600; color: var(--ink); margin-bottom: 10px; letter-spacing: -0.01em; }
+.feat-body { font-size: 13px; font-weight: 300; color: var(--mid); line-height: 1.72; }
+
+/* ── EXAMPLES ── */
+.ex-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-top: 56px;
+}
+.ex-card {
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  overflow: hidden;
+  background: #fff;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+.ex-card:hover {
+  border-color: #ccc;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.07);
+  transform: translateY(-3px);
+}
+.ex-thumb {
+  height: 200px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 64px;
+  border-bottom: 1px solid var(--rule);
+}
+.ex-body { padding: 28px; }
+.ex-kicker {
+  font-family: var(--mono);
+  font-size: 10px; color: var(--faint);
+  letter-spacing: 0.1em; margin-bottom: 10px;
+}
+.ex-title {
+  font-family: 'Editorial New', Georgia, serif;
+  font-size: 24px; font-weight: 400;
+  letter-spacing: -0.02em; color: var(--ink);
+  margin-bottom: 10px;
+}
+.ex-desc { font-size: 13px; font-weight: 300; color: var(--mid); line-height: 1.68; margin-bottom: 18px; }
+.ex-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag {
+  font-family: var(--mono);
+  font-size: 10px; font-weight: 500;
+  letter-spacing: 0.06em;
+  padding: 4px 10px; border-radius: 2px;
+  background: var(--bg2); color: var(--mid);
+  border: 1px solid var(--rule);
+}
+
+/* ── PRICING ── */
+.price-grid {
+  display: grid; grid-template-columns: repeat(3,1fr);
+  gap: 0; margin-top: 56px;
+  border: 1px solid var(--rule);
+  border-radius: 4px; overflow: hidden;
+}
+.p-card {
+  padding: 40px 34px;
+  border-right: 1px solid var(--rule);
+  background: var(--bg);
+  position: relative;
+  transition: background 0.2s;
+}
+.p-card:last-child { border-right: none; }
+.p-card:hover { background: #fff; }
+.p-card.pop { background: var(--ink); }
+.p-card.pop:hover { background: #1a1a18; }
+.pop-label {
+  position: absolute; top: 20px; right: 20px;
+  font-family: var(--mono);
+  font-size: 9px; font-weight: 500;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  background: var(--accent); color: #fff;
+  padding: 4px 10px; border-radius: 2px;
+}
+.p-tier {
+  font-family: var(--mono);
+  font-size: 11px; font-weight: 500;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--faint); margin-bottom: 16px;
+}
+.p-card.pop .p-tier { color: rgba(255,255,255,0.35); }
+.p-price {
+  font-family: 'Editorial New', Georgia, serif;
+  font-size: 60px; font-weight: 400;
+  letter-spacing: -0.04em; color: var(--ink);
+  line-height: 1; margin-bottom: 6px;
+}
+.p-card.pop .p-price { color: #fafaf8; }
+.p-cadence { font-size: 12px; color: var(--faint); margin-bottom: 32px; }
+.p-card.pop .p-cadence { color: rgba(255,255,255,0.3); }
+.p-divider { height: 1px; background: var(--rule); margin-bottom: 28px; }
+.p-card.pop .p-divider { background: rgba(255,255,255,0.1); }
+.p-list { list-style: none; display: flex; flex-direction: column; gap: 11px; margin-bottom: 36px; }
+.p-list li {
+  font-size: 13px; font-weight: 300;
+  color: #444; line-height: 1.4;
+  display: flex; align-items: baseline; gap: 10px;
+}
+.p-card.pop .p-list li { color: rgba(255,255,255,0.6); }
+.p-list li::before {
+  content: '—';
+  font-size: 11px; color: var(--faint);
+  flex-shrink: 0;
+}
+.p-card.pop .p-list li::before { color: rgba(255,255,255,0.2); }
+.p-cta {
+  display: block; text-align: center;
+  font-size: 12px; font-weight: 600;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 13px; border-radius: 3px;
+  text-decoration: none; transition: all 0.15s;
+  border: 1px solid var(--rule);
+  background: transparent; color: var(--ink);
+}
+.p-cta:hover { background: var(--ink); color: #fafaf8; border-color: var(--ink); }
+.p-card.pop .p-cta { border-color: rgba(255,255,255,0.2); color: #fafaf8; }
+.p-card.pop .p-cta:hover { background: rgba(255,255,255,0.1); }
+
+/* ── PROCESS ── */
+.process-grid {
+  display: grid; grid-template-columns: repeat(4,1fr);
+  gap: 0; margin-top: 64px;
+  border: 1px solid var(--rule);
+  border-radius: 4px; overflow: hidden;
+}
+.step {
+  padding: 36px 28px;
+  border-right: 1px solid var(--rule);
+  transition: background 0.2s;
+}
+.step:last-child { border-right: none; }
+.step:hover { background: #fff; }
+.step-n {
+  font-family: 'Editorial New', Georgia, serif;
+  font-size: 36px; font-weight: 400;
+  color: var(--rule); line-height: 1;
+  margin-bottom: 20px; letter-spacing: -0.02em;
+}
+.step-title { font-size: 14px; font-weight: 600; color: var(--ink); margin-bottom: 10px; letter-spacing: -0.01em; }
+.step-desc { font-size: 12.5px; font-weight: 300; color: var(--mid); line-height: 1.7; }
+
+/* ── CTA ── */
+.cta-section {
+  padding: 120px 48px;
+  text-align: center;
+  border-bottom: none;
+}
+.cta-h {
+  font-family: 'Editorial New', Georgia, serif;
+  font-size: clamp(40px, 5.5vw, 80px);
+  font-weight: 400; line-height: 1.05;
+  letter-spacing: -0.03em; color: var(--ink);
+  margin-bottom: 24px;
+  max-width: 800px; margin-left: auto; margin-right: auto;
+}
+.cta-h em { font-style: italic; color: var(--blue); }
+.cta-sub {
+  font-size: 16px; font-weight: 300;
+  color: var(--mid); max-width: 420px;
+  margin: 0 auto 48px; line-height: 1.75;
+}
+.cta-row { display: flex; gap: 16px; justify-content: center; align-items: center; flex-wrap: wrap; }
+
+/* ── FOOTER ── */
+footer {
+  border-top: 1px solid var(--rule);
+  padding: 28px 48px;
+  display: flex; justify-content: space-between; align-items: center;
+  background: var(--bg);
+}
+.footer-left {
+  font-family: var(--mono);
+  font-size: 11px; color: var(--faint);
+  letter-spacing: 0.06em;
+}
+.footer-right { display: flex; gap: 24px; }
+.footer-right a {
+  font-size: 12px; color: var(--faint);
+  text-decoration: none; transition: color 0.15s;
+}
+.footer-right a:hover { color: var(--ink); }
+
+/* ── REVEAL ── */
+.r { opacity: 0; transform: translateY(18px); transition: opacity 0.55s ease, transform 0.55s ease; }
+.r.on { opacity: 1; transform: translateY(0); }
+
+/* ── MOBILE ── */
+@media (max-width: 860px) {
+  header { padding: 0 20px; }
+  nav a:not(.nav-quote) { display: none; }
+  .hero { grid-template-columns: 1fr; padding: 80px 20px 64px; gap: 48px; }
+  .hero-aside { flex-direction: row; flex-wrap: wrap; gap: 0; }
+  .hero-stat { flex: 1; min-width: 120px; padding: 16px 16px 0 0; }
+  .hero-from { width: 100%; padding: 16px 0 0; }
+  .sec, .sec-full-inner, .cta-section { padding: 72px 20px; }
+  .feat-grid { grid-template-columns: 1fr; }
+  .feat { border-right: none; }
+  .ex-grid { grid-template-columns: 1fr; }
+  .price-grid { grid-template-columns: 1fr; }
+  .p-card { border-right: none; border-bottom: 1px solid var(--rule); }
+  .p-card:last-child { border-bottom: none; }
+  .process-grid { grid-template-columns: 1fr 1fr; }
+  .step:nth-child(2n) { border-right: none; }
+  .step:nth-child(3), .step:nth-child(4) { border-top: 1px solid var(--rule); }
+  footer { flex-direction: column; gap: 12px; text-align: center; padding: 24px 20px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <a class="logo" href="#">hunter<span>.gray</span></a>
+  <nav>
+    <a href="#features">Features</a>
+    <a href="#examples">Examples</a>
+    <a href="#pricing">Pricing</a>
+    <a href="mailto:huntergray6@gmail.com?subject=Custom Map Inquiry" class="nav-quote">Get a Quote</a>
+  </nav>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <div>
+    <h1 class="hero-h1">Custom<br>interactive<br>maps, <em>built<br>to order.</em></h1>
+    <p class="hero-sub">I build satellite-view interactive maps for tourism businesses, vacation rentals, hotels, and local guides. Custom pins, instant popups, search and filter. Delivered in 48 hours as a single file you own forever.</p>
+    <div class="hero-actions">
+      <a href="mailto:huntergray6@gmail.com?subject=Custom Map Inquiry" class="btn-primary">Request a quote</a>
+      <a href="#examples" class="btn-text">See live examples</a>
+    </div>
+  </div>
+  <div class="hero-aside">
+    <div class="hero-stat r">
+      <div class="hero-stat-n">40+</div>
+      <div class="hero-stat-l">Pins per map</div>
+    </div>
+    <div class="hero-stat r">
+      <div class="hero-stat-n">48h</div>
+      <div class="hero-stat-l">Avg. turnaround</div>
+    </div>
+    <div class="hero-stat r">
+      <div class="hero-stat-n">$0</div>
+      <div class="hero-stat-l">Monthly fees</div>
+    </div>
+    <div class="hero-from r">
+      Built from Culebra, Puerto Rico 🌴
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="sec" id="features">
+  <div class="kicker r">What's included</div>
+  <h2 class="sec-h r">Everything your customers need<br><em>in a single file.</em></h2>
+  <p class="sec-p r">No apps to download. No logins. No subscriptions. One .html file your customers open and immediately have your entire world, beautifully mapped and fully interactive.</p>
+  <div class="feat-grid">
+    <div class="feat r">
+      <div class="feat-kicker">01 — Pins</div>
+      <div class="feat-title">Custom pins & categories</div>
+      <div class="feat-body">Every location organized into color-coded categories. Tap any pin for the full description, local tips, and a one-tap Google Maps directions button.</div>
+    </div>
+    <div class="feat r">
+      <div class="feat-kicker">02 — Map</div>
+      <div class="feat-title">Satellite imagery</div>
+      <div class="feat-body">Real Esri aerial satellite view of your location — or classic street map. Loads fast on any connection. Looks sharp on any screen.</div>
+    </div>
+    <div class="feat r">
+      <div class="feat-kicker">03 — Search</div>
+      <div class="feat-title">Search & filter</div>
+      <div class="feat-body">Visitors search by keyword or filter by category in real time. Looking for a beach? Tap it. Looking for sushi? Type it. Instant results.</div>
+    </div>
+    <div class="feat r">
+      <div class="feat-kicker">04 — Device</div>
+      <div class="feat-title">Works on everything</div>
+      <div class="feat-body">iPhone, Android, Mac, Windows. Opens in Safari, Chrome, Firefox with zero installation. Your customers are using it in seconds, anywhere.</div>
+    </div>
+    <div class="feat r">
+      <div class="feat-kicker">05 — Directions</div>
+      <div class="feat-title">Google Maps integration</div>
+      <div class="feat-body">Every pin has a one-tap button that opens Google Maps pre-loaded with that exact location. Turn-by-turn directions from anywhere.</div>
+    </div>
+    <div class="feat r">
+      <div class="feat-kicker">06 — Delivery</div>
+      <div class="feat-title">One file, yours forever</div>
+      <div class="feat-body">You receive one .html file you own outright. Host it, sell it, email it, embed it on your site. No backend. No maintenance. No fees. Ever.</div>
+    </div>
+  </div>
+</section>
+
+<!-- EXAMPLES -->
+<div class="sec-full sec-alt" id="examples">
+  <div class="sec-full-inner">
+    <div class="kicker r">Live examples</div>
+    <h2 class="sec-h r">Two maps already live<br><em>and generating revenue.</em></h2>
+    <p class="sec-p r">Your business could be next.</p>
+    <div class="ex-grid">
+      <div class="ex-card r">
+        <div class="ex-thumb" style="background:linear-gradient(160deg,#0c3248,#1a607a)">🌴</div>
+        <div class="ex-body">
+          <div class="ex-kicker">Caribbean · Offline map</div>
+          <div class="ex-title">Culebra, Puerto Rico</div>
+          <div class="ex-desc">A fully offline interactive map with 60+ pins covering every beach, snorkel spot, restaurant, rental shop, and hidden gem on the island. Sold as a digital download at $7.99.</div>
+          <div class="ex-tags">
+            <span class="tag">60+ pins</span>
+            <span class="tag">Works offline</span>
+            <span class="tag">Search & filter</span>
+            <span class="tag">Satellite view</span>
+          </div>
+        </div>
+      </div>
+      <div class="ex-card r">
+        <div class="ex-thumb" style="background:linear-gradient(160deg,#091e2e,#1a4a65)">🏝️</div>
+        <div class="ex-body">
+          <div class="ex-kicker">US Virgin Islands · Cruise guide</div>
+          <div class="ex-title">Charlotte Amalie, St. Thomas</div>
+          <div class="ex-desc">A cruise port guide with 40+ pins across 10 categories — duty-free shopping, beaches, historic sites, restaurants, bars, views, and getting around.</div>
+          <div class="ex-tags">
+            <span class="tag">40+ pins</span>
+            <span class="tag">10 categories</span>
+            <span class="tag">Cruise focused</span>
+            <span class="tag">Satellite view</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PRICING -->
+<section class="sec" id="pricing">
+  <div class="kicker r">Pricing</div>
+  <h2 class="sec-h r">Flat rate.<br><em>No surprises.</em></h2>
+  <p class="sec-p r">One-time payment. The file is yours forever. No monthly fees, no hosting costs, no ongoing commitment of any kind.</p>
+  <div class="price-grid">
+    <div class="p-card r">
+      <div class="p-tier">Starter</div>
+      <div class="p-price">$299</div>
+      <div class="p-cadence">One-time · 48hr delivery</div>
+      <div class="p-divider"></div>
+      <ul class="p-list">
+        <li>Up to 20 custom pins</li>
+        <li>Up to 3 categories</li>
+        <li>Pin descriptions & tips</li>
+        <li>Google Maps links</li>
+        <li>Mobile responsive</li>
+        <li>1 revision round</li>
+      </ul>
+      <a href="mailto:huntergray6@gmail.com?subject=Starter Map Quote" class="p-cta">Get started</a>
+    </div>
+    <div class="p-card pop r">
+      <div class="pop-label">Most popular</div>
+      <div class="p-tier">Professional</div>
+      <div class="p-price">$499</div>
+      <div class="p-cadence">One-time · 48hr delivery</div>
+      <div class="p-divider"></div>
+      <ul class="p-list">
+        <li>Up to 50 custom pins</li>
+        <li>Unlimited categories</li>
+        <li>Full descriptions & badges</li>
+        <li>Search + filter</li>
+        <li>Satellite or street map</li>
+        <li>Sidebar location list</li>
+        <li>2 revision rounds</li>
+      </ul>
+      <a href="mailto:huntergray6@gmail.com?subject=Professional Map Quote" class="p-cta">Get started</a>
+    </div>
+    <div class="p-card r">
+      <div class="p-tier">Premium</div>
+      <div class="p-price">$799</div>
+      <div class="p-cadence">One-time · 72hr delivery</div>
+      <div class="p-divider"></div>
+      <ul class="p-list">
+        <li>Unlimited pins</li>
+        <li>Unlimited categories</li>
+        <li>Custom branding & colors</li>
+        <li>Embeddable on your site</li>
+        <li>Offline capability</li>
+        <li>Photo per pin</li>
+        <li>3 revision rounds</li>
+        <li>Priority delivery</li>
+      </ul>
+      <a href="mailto:huntergray6@gmail.com?subject=Premium Map Quote" class="p-cta">Get started</a>
+    </div>
+  </div>
+</section>
+
+<!-- PROCESS -->
+<div class="sec-full sec-alt">
+  <div class="sec-full-inner">
+    <div class="kicker r">Process</div>
+    <h2 class="sec-h r">From idea to live map<br><em>in 48 hours.</em></h2>
+    <div class="process-grid">
+      <div class="step r">
+        <div class="step-n">01</div>
+        <div class="step-title">You share your locations</div>
+        <div class="step-desc">Send a list of your pins — spreadsheet, Google doc, or a note. Names, addresses, descriptions, tips.</div>
+      </div>
+      <div class="step r">
+        <div class="step-n">02</div>
+        <div class="step-title">I build your map</div>
+        <div class="step-desc">I design and build your custom map, set up categories, refine descriptions, and test on mobile and desktop.</div>
+      </div>
+      <div class="step r">
+        <div class="step-n">03</div>
+        <div class="step-title">You review & approve</div>
+        <div class="step-desc">I send you a preview link. Request changes. Revisions are included — I won't stop until it's exactly right.</div>
+      </div>
+      <div class="step r">
+        <div class="step-n">04</div>
+        <div class="step-title">You receive the file</div>
+        <div class="step-desc">I send the final .html file. Host it, sell it, email it, embed it — it's yours to do whatever you want with.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CTA -->
+<section class="cta-section">
+  <h2 class="cta-h r">Ready to put your<br>world <em>on the map?</em></h2>
+  <p class="cta-sub r">Tell me about your business and your locations. I'll have a quote back within a few hours.</p>
+  <div class="cta-row r">
+    <a href="mailto:huntergray6@gmail.com?subject=Custom Map Inquiry" class="btn-primary">Send me a message</a>
+    <a href="https://wa.me/14343731763" target="_blank" class="btn-text">WhatsApp me instead</a>
+  </div>
+</section>
+
+<footer>
+  <div class="footer-left">© 2026 Hunter Gray — Custom Interactive Maps</div>
+  <div class="footer-right">
+    <a href="mailto:huntergray6@gmail.com">huntergray6@gmail.com</a>
+    <a href="https://wa.me/14343731763">WhatsApp</a>
+  </div>
+</footer>
+
+<script>
+const obs = new IntersectionObserver(entries => {
+  entries.forEach((e, i) => {
+    if (e.isIntersecting) {
+      setTimeout(() => e.target.classList.add('on'), i * 40);
+      obs.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.07 });
+document.querySelectorAll('.r').forEach(el => obs.observe(el));
+</script>
+</body>
+</html>
